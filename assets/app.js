@@ -1,9 +1,79 @@
 let filter='Todos',cart=[];
+
 const BASE=window.PRODUCTS||[];
-const saved=localStorage.getItem('bonnys_products_v2');
-let P=saved?JSON.parse(saved):BASE.map(p=>({...p,stock:p.stock??1,price:p.price??'',sizes:p.sizes||'',colors:p.colors||p.color||''}));
-const grid=document.querySelector('#grid'),chips=document.querySelector('#chips'),search=document.querySelector('#search');
+
+let P=BASE.map(p=>({
+  ...p,
+  id:String(p.id),
+  stock:p.stock??1,
+  price:p.price??'',
+  sizes:p.sizes||'',
+  colors:p.colors||p.color||''
+}));
+
+const grid=document.querySelector('#grid'),
+      chips=document.querySelector('#chips'),
+      search=document.querySelector('#search');
+
 const cats=['Todos','Trajes','Sacos','Complementos','Accesorios','Telas'];
+
+async function loadProducts(){
+  try{
+    const response=await fetch('/api/products',{cache:'no-store'});
+
+    if(!response.ok){
+      throw new Error('No se pudo consultar el catálogo');
+    }
+
+    const data=await response.json();
+
+    if(!data.success || !Array.isArray(data.products)){
+      throw new Error('Respuesta de catálogo inválida');
+    }
+
+    P=data.products.map(p=>({
+      ...p,
+
+      // El frontend seguirá manejando el ID como texto
+      id:String(p.id),
+
+      // Conservamos también el slug de D1
+      slug:p.slug||'',
+
+      images:Array.isArray(p.images)?p.images:[],
+
+      // Temporal hasta conectar inventory
+      stock:p.stock??1,
+
+      // Los precios 0 importados no se muestran
+      price:Number(p.price)>0?p.price:'',
+
+      sizes:p.sizes||'',
+      colors:p.colors||p.color||''
+    }));
+
+    render();
+    drawAdmin();
+
+    console.log(`Bonny's Collection: ${P.length} productos cargados desde D1`);
+
+  }catch(error){
+    console.error('D1 no disponible. Usando catálogo de respaldo.',error);
+
+    // products.js continúa funcionando como respaldo
+    P=BASE.map(p=>({
+      ...p,
+      id:String(p.id),
+      stock:p.stock??1,
+      price:p.price??'',
+      sizes:p.sizes||'',
+      colors:p.colors||p.color||''
+    }));
+
+    render();
+    drawAdmin();
+  }
+}
 function save(){localStorage.setItem('bonnys_products_v2',JSON.stringify(P));render();drawAdmin()}
 
 function drawChips(){chips.innerHTML=cats.map(c=>`<button class="${c===filter?'active':''}" onclick="setFilter('${c}')">${c}</button>`).join('')}
@@ -33,4 +103,8 @@ function cancelForm(){productForm.classList.add('hidden')}
 function readFiles(files){return Promise.all([...files].map(f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)})))}
 async function saveProduct(oldId){const name=document.querySelector('#fName').value.trim();if(!name)return alert('Escribe el nombre del producto.');const files=document.querySelector('#fImages').files;let images=JSON.parse(productForm.dataset.oldImages||'[]');if(files.length)images=await readFiles(files);if(!images.length)return alert('Agrega al menos una imagen.');const obj={id:oldId||('prod-'+Date.now()),name,category:document.querySelector('#fCat').value,images,color:document.querySelector('#fColor').value.trim(),description:document.querySelector('#fDesc').value.trim(),stock:Number(document.querySelector('#fStock').value||0),price:document.querySelector('#fPrice').value,sizes:document.querySelector('#fSizes').value.trim()};const ix=P.findIndex(x=>x.id===oldId);if(ix>=0)P[ix]=obj;else P.unshift(obj);save();productForm.classList.add('hidden')}
 function deleteProduct(id){const p=P.find(x=>x.id===id);if(p&&confirm(`¿Eliminar ${p.name}?`)){P=P.filter(x=>x.id!==id);save()}}
-drawChips();render();updateCart();drawAdmin();
+drawChips();
+render();
+updateCart();
+drawAdmin();
+loadProducts();
