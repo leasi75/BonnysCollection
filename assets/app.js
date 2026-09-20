@@ -3,7 +3,7 @@ const BASE=window.PRODUCTS||[];
 const saved=localStorage.getItem('bonnys_products_v2');
 let P=saved?JSON.parse(saved):BASE.map(p=>({...p,stock:p.stock??1,price:p.price??'',sizes:p.sizes||'',colors:p.colors||p.color||''}));
 const grid=document.querySelector('#grid'),chips=document.querySelector('#chips'),search=document.querySelector('#search');
-const cats=['Todos','Trajes','Sacos','Complementos','Accesorios'];
+const cats=['Todos','Trajes','Sacos','Complementos','Accesorios','Telas'];
 function save(){localStorage.setItem('bonnys_products_v2',JSON.stringify(P));render();drawAdmin()}
 
 function drawChips(){chips.innerHTML=cats.map(c=>`<button class="${c===filter?'active':''}" onclick="setFilter('${c}')">${c}</button>`).join('')}
