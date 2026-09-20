@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bonnyscollection",
+  "compatibility_date": "2026-09-18",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "."
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "bonnyscollection-db",
+      "database_id": "b8271bae-5da8-4726-91b9-ffdafc5497e7"
+    }
+  ]
+}
