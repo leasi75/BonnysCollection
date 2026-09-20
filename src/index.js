@@ -32,42 +32,59 @@ export default {
     // --------------------------------------------------
     // API: Obtener productos
     // --------------------------------------------------
-    if (url.pathname === "/api/products" && request.method === "GET") {
-      try {
-        const { results } = await env.DB
-          .prepare(`
-            SELECT
-              id,
-              name,
-              category,
-              description,
-              price,
-              image,
-              image2,
-              color,
-              active,
-              created_at,
-              updated_at
-            FROM products
-            WHERE active = 1
-            ORDER BY id DESC
-          `)
-          .all();
+   if (url.pathname === "/api/products" && request.method === "GET") {
+  try {
+    const { results } = await env.DB
+      .prepare(`
+        SELECT
+          p.id,
+          p.slug,
+          p.name,
+          p.category,
+          p.description,
+          p.price,
+          p.color,
+          p.active,
+          p.created_at,
+          p.updated_at,
+          COALESCE(
+            (
+              SELECT json_group_array(image_url)
+              FROM (
+                SELECT image_url
+                FROM product_images
+                WHERE product_id = p.id
+                ORDER BY sort_order, id
+              )
+            ),
+            '[]'
+          ) AS images
+        FROM products p
+        WHERE p.active = 1
+        ORDER BY p.id ASC
+      `)
+      .all();
 
-        return Response.json({
-          success: true,
-          products: results
-        });
-      } catch (error) {
-        return Response.json(
-          {
-            success: false,
-            error: error.message
-          },
-          { status: 500 }
-        );
-      }
-    }
+    const products = results.map(product => ({
+      ...product,
+      images: JSON.parse(product.images || "[]")
+    }));
+
+    return Response.json({
+      success: true,
+      products
+    });
+
+  } catch (error) {
+    return Response.json(
+      {
+        success: false,
+        error: error.message
+      },
+      { status: 500 }
+    );
+  }
+}
 
     // --------------------------------------------------
     // API: Inventario de un producto
