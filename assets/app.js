@@ -108,6 +108,28 @@ function addCart(id,size=''){
 
   updateCart();
 }
+function changeQuantity(id,size,change){
+  const item=cart.find(x=>x.id===id&&x.selectedSize===size);
+  if(!item)return;
+
+  const inventoryItem=(item.inventory||[]).find(
+    x=>String(x.size)===String(size)
+  );
+
+  const maxStock=inventoryItem?Number(inventoryItem.stock):Number(item.stock);
+
+  const newQuantity=(item.quantity||1)+change;
+
+  if(newQuantity<1)return;
+
+  if(newQuantity>maxStock){
+    alert(`Solo hay ${maxStock} pieza${maxStock===1?'':'s'} disponible${maxStock===1?'':'s'} en talla ${size}.`);
+    return;
+  }
+
+  item.quantity=newQuantity;
+  updateCart();
+}
 function removeCart(id,size=''){cart=cart.filter(x=>!(x.id===id&&x.selectedSize===size));updateCart()}
 function updateCart(){document.querySelector('#count').textContent=cart.length;document.querySelector('#cartItems').innerHTML=cart.length?cart.map(p=>`<div class="ci"><img src="${p.images[0]}"><div><b>${esc(p.name)}</b><p>${esc(p.color||p.colors||'')}${p.selectedSize?` · Talla: ${esc(p.selectedSize)}`:''}</p><button onclick="removeCart('${p.id}','${p.selectedSize||''}')">Quitar</button></div></div>`).join(''):'<p>Tu pedido está vacío.</p>'}
 function toggleCart(){document.querySelector('#drawer').classList.toggle('open');document.querySelector('#shade').classList.toggle('open')}
