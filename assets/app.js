@@ -312,7 +312,27 @@ async function saveProduct(oldId) {
     if (!response.ok || !data.success) {
       throw new Error(data.error || 'No fue posible guardar el producto.');
     }
+    const productId = isEditing ? oldId : data.id;
 
+    const inventoryResponse = await fetch(
+      `/api/admin/inventory/${encodeURIComponent(productId)}`,
+      {
+        method: 'PUT',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ inventory })
+      }
+    );
+
+    const inventoryData = await inventoryResponse.json();
+
+    if (!inventoryResponse.ok || !inventoryData.success) {
+      throw new Error(
+        inventoryData.error || 'No fue posible guardar el inventario.'
+      );
+    }
     productForm.classList.add('hidden');
 
     await loadProducts();
