@@ -275,33 +275,7 @@ async function saveProduct(oldId) {
   const color = document.querySelector('#fColor').value.trim();
   const description = document.querySelector('#fDesc').value.trim();
   const priceValue = document.querySelector('#fPrice').value;
-  const inventoryText = document.querySelector('#fSizes').value.trim();
 
-  const inventory = inventoryText
-    ? inventoryText.split(',').map(item => {
-        const parts = item.split(':');
-
-        return {
-          size: String(parts[0] || '').trim(),
-          stock: parts.length === 2
-            ? Number(String(parts[1] || '').trim())
-            : NaN
-        };
-      })
-    : [];
-
-  const inventoryValid = inventory.every(item =>
-    item.size &&
-    Number.isInteger(item.stock) &&
-    item.stock >= 0
-  );
-
-  if (!inventoryValid) {
-    alert(
-      'Inventario inválido. Usa el formato talla:cantidad. Ejemplo: 30:2, 32:4, 34:1'
-    );
-    return;
-  }
   const productData = {
     name,
     category,
