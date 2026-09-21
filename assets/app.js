@@ -195,8 +195,127 @@ function editProduct(id){const p=P.find(x=>x.id===id);if(p)showForm({...p})}
 function showForm(p){productForm.classList.remove('hidden');productForm.innerHTML=`<h3>${p.id?'Editar producto':'Nuevo producto'}</h3><div class="formGrid"><label>Nombre<input id="fName" value="${esc(p.name)}"></label><label>Categoría<select id="fCat">${cats.slice(1).map(c=>`<option ${c===p.category?'selected':''}>${c}</option>`).join('')}</select></label><label>Color<input id="fColor" value="${esc(p.color||'')}"></label><label>Precio<input id="fPrice" type="number" min="0" step="0.01" value="${esc(p.price||'')}"></label><label>Stock<input id="fStock" type="number" min="0" value="${p.stock??0}"></label><label>Tallas<input id="fSizes" placeholder="Ej. 30, 32, 34" value="${esc(p.sizes||'')}"></label><label class="wide">Descripción<textarea id="fDesc">${esc(p.description||'')}</textarea></label><label class="wide">Agregar imágenes<input id="fImages" type="file" accept="image/*" multiple><small>Las imágenes se guardan en este navegador. Puedes seleccionar una o varias.</small></label></div><div class="previewImgs">${(p.images||[]).map(i=>`<img src="${i}">`).join('')}</div><div class="formButtons"><button onclick="cancelForm()">Cancelar</button><button class="primary" onclick="saveProduct('${p.id}')">Guardar producto</button></div>`;productForm.scrollIntoView({behavior:'smooth',block:'start'});productForm.dataset.oldImages=JSON.stringify(p.images||[])}
 function cancelForm(){productForm.classList.add('hidden')}
 function readFiles(files){return Promise.all([...files].map(f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)})))}
-async function saveProduct(oldId){const name=document.querySelector('#fName').value.trim();if(!name)return alert('Escribe el nombre del producto.');const files=document.querySelector('#fImages').files;let images=JSON.parse(productForm.dataset.oldImages||'[]');if(files.length)images=await readFiles(files);if(!images.length)return alert('Agrega al menos una imagen.');const obj={id:oldId||('prod-'+Date.now()),name,category:document.querySelector('#fCat').value,images,color:document.querySelector('#fColor').value.trim(),description:document.querySelector('#fDesc').value.trim(),stock:Number(document.querySelector('#fStock').value||0),price:document.querySelector('#fPrice').value,sizes:document.querySelector('#fSizes').value.trim()};const ix=P.findIndex(x=>x.id===oldId);if(ix>=0)P[ix]=obj;else P.unshift(obj);save();productForm.classList.add('hidden')}
-function deleteProduct(id){const p=P.find(x=>x.id===id);if(p&&confirm(`¿Eliminar ${p.name}?`)){P=P.filter(x=>x.id!==id);save()}}
+async function saveProduct(oldId) {
+
+  const name = document.querySelector('#fName').value.trim();
+
+  if (!name) {
+    alert('Escribe el nombre del producto.');
+    return;
+  }
+
+  const category = document.querySelector('#fCat').value;
+  const color = document.querySelector('#fColor').value.trim();
+  const description = document.querySelector('#fDesc').value.trim();
+  const priceValue = document.querySelector('#fPrice').value;
+
+  const productData = {
+    name,
+    category,
+    color,
+    description,
+    price: priceValue === '' ? 0 : Number(priceValue)
+  };
+
+  try {
+
+    const isEditing = Boolean(oldId);
+
+    const url = isEditing
+      ? `/api/admin/products/${encodeURIComponent(oldId)}`
+      : '/api/admin/products';
+
+    const response = await fetch(url, {
+      method: isEditing ? 'PUT' : 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(productData)
+    });
+
+    const data = await response.json();
+
+    if (response.status === 401) {
+      alert('Tu sesión de administración terminó. Ingresa nuevamente.');
+      closeAdmin();
+      return;
+    }
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'No fue posible guardar el producto.');
+    }
+
+    productForm.classList.add('hidden');
+
+    await loadProducts();
+
+    alert(
+      isEditing
+        ? 'Producto actualizado correctamente.'
+        : 'Producto creado correctamente.'
+    );
+
+  } catch (error) {
+
+    console.error('Error guardando producto:', error);
+
+    alert(
+      error.message ||
+      'Ocurrió un error al guardar el producto.'
+    );
+  }
+}
+async function deleteProduct(id) {
+
+  const p = P.find(x => x.id === id);
+
+  if (!p) return;
+
+  const confirmed = confirm(
+    `¿Eliminar ${p.name}?\n\nEl producto dejará de aparecer en el catálogo.`
+  );
+
+  if (!confirmed) return;
+
+  try {
+
+    const response = await fetch(
+      `/api/admin/products/${encodeURIComponent(id)}`,
+      {
+        method: 'DELETE',
+        credentials: 'same-origin'
+      }
+    );
+
+    const data = await response.json();
+
+    if (response.status === 401) {
+      alert('Tu sesión de administración terminó. Ingresa nuevamente.');
+      closeAdmin();
+      return;
+    }
+
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data.error || 'No fue posible eliminar el producto.'
+      );
+    }
+
+    await loadProducts();
+
+    alert('Producto eliminado correctamente.');
+
+  } catch (error) {
+
+    console.error('Error eliminando producto:', error);
+
+    alert(
+      error.message ||
+      'Ocurrió un error al eliminar el producto.'
+    );
+  }
+}
 drawChips();
 render();
 updateCart();
