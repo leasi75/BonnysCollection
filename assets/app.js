@@ -93,7 +93,101 @@ document.querySelector('#cartBtn').onclick=toggleCart;
 document.querySelector('#wa').onclick=()=>{if(!cart.length)return;let msg='Hola, me interesan estos productos de Bonny’s Collection:\n\n'+cart.map((p,i)=>`${i+1}. ${p.name} - ${p.color||p.colors||''}`).join('\n')+'\n\n¿Me pueden confirmar disponibilidad, tallas y precio?';window.open('https://wa.me/527221144931?text='+encodeURIComponent(msg),'_blank')};
 // ADMIN
 const adminModal=document.querySelector('#adminModal'),adminList=document.querySelector('#adminList'),productForm=document.querySelector('#productForm');
-document.querySelector('#adminBtn').onclick=()=>{adminModal.classList.remove('hidden');drawAdmin()};
+// --------------------------------------------------
+// ACCESO SEGURO AL ADMINISTRADOR
+// --------------------------------------------------
+
+async function checkAdminSession() {
+  try {
+    const response = await fetch('/api/admin/session', {
+      method: 'GET',
+      credentials: 'same-origin',
+      cache: 'no-store'
+    });
+
+    const data = await response.json();
+
+    return data.success === true && data.authenticated === true;
+  } catch (error) {
+    console.error('Error comprobando sesión:', error);
+    return false;
+  }
+}
+
+async function adminLogin(password) {
+  try {
+    const response = await fetch('/api/admin/login', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        password: password
+      })
+    });
+
+    const data = await response.json();
+
+    return {
+      ok: response.ok && data.success === true,
+      message: data.error || ''
+    };
+
+  } catch (error) {
+    console.error('Error iniciando sesión:', error);
+
+    return {
+      ok: false,
+      message: 'No fue posible conectar con el servidor.'
+    };
+  }
+}
+
+function openAdminPanel() {
+  adminModal.classList.remove('hidden');
+  drawAdmin();
+}
+
+document.querySelector('#adminBtn').onclick = async () => {
+
+  // Primero comprobamos si ya existe una sesión
+  const authenticated = await checkAdminSession();
+
+  if (authenticated) {
+    openAdminPanel();
+    return;
+  }
+
+  // Si no existe sesión, solicitamos la contraseña
+  const password = prompt('Ingresa la contraseña de administración:');
+
+  if (password === null) {
+    return;
+  }
+
+  if (!password.trim()) {
+    alert('Escribe la contraseña de administración.');
+    return;
+  }
+
+  const result = await adminLogin(password);
+
+  if (!result.ok) {
+    alert(result.message || 'Contraseña incorrecta.');
+    return;
+  }
+
+  // Verificación adicional de que la cookie quedó activa
+  const sessionCreated = await checkAdminSession();
+
+  if (!sessionCreated) {
+    alert('La sesión no pudo iniciarse correctamente.');
+    return;
+  }
+
+  openAdminPanel();
+};
 function closeAdmin(){adminModal.classList.add('hidden');productForm.classList.add('hidden')}
 function drawAdmin(){adminList.innerHTML=P.map(p=>`<div class="adminRow"><img src="${p.images[0]}"><div class="adminInfo"><b>${esc(p.name)}</b><span>${p.category} · ${esc(p.color||p.colors||'')}</span><span class="${Number(p.stock)<=0?'red':''}">Stock: ${p.stock??0}${p.price?' · $'+esc(p.price):''}</span></div><div class="adminActions"><button onclick="editProduct('${p.id}')">Editar</button><button class="danger" onclick="deleteProduct('${p.id}')">Eliminar</button></div></div>`).join('')}
 function newProduct(){showForm({id:'',name:'',category:'Trajes',images:[],color:'',description:'',stock:1,price:'',sizes:'',colors:''})}
