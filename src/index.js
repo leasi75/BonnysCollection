@@ -193,6 +193,27 @@ export default {
               p.active,
               p.created_at,
               p.updated_at,
+                            COALESCE(
+                (
+                  SELECT SUM(i.stock)
+                  FROM inventory i
+                  WHERE i.product_id = p.id
+                ),
+                0
+              ) AS stock,
+
+              COALESCE(
+                (
+                  SELECT json_group_array(size)
+                  FROM (
+                    SELECT i.size AS size
+                    FROM inventory i
+                    WHERE i.product_id = p.id
+                    ORDER BY i.size
+                  )
+                ),
+                '[]'
+              ) AS sizes,
               COALESCE(
                 (
                   SELECT json_group_array(image_url)
@@ -212,9 +233,11 @@ export default {
           .all();
 
         const products = results.map(product => ({
-          ...product,
-          images: JSON.parse(product.images || "[]")
-        }));
+  ...product,
+  stock: Number(product.stock || 0),
+  sizes: JSON.parse(product.sizes || "[]"),
+  images: JSON.parse(product.images || "[]")
+}));
 
         return Response.json({
           success: true,
