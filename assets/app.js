@@ -92,7 +92,21 @@ async function openProduct(id){let p=P.find(x=>x.id===id);if(!p)return;try{
   p.inventory=[];
 }document.querySelector('#modalBody').innerHTML=`<div class="detail"><div class="gallery ${p.category==='Accesorios'?'accessoryGallery':''}">${p.images.map(i=>`<img src="${i}" alt="${esc(p.name)}">`).join('')}</div><div class="detailText"><small>${p.category}</small><h2>${esc(p.name)}</h2><p>${esc(p.description||'')}</p><p><b>Color:</b> ${esc(p.color||p.colors||'Por confirmar')}</p>${p.sizes?`<p><b>Tallas:</b> ${esc(p.sizes)}</p>`:''}${p.price?`<p class="detailPrice"><b>Precio:</b> $${esc(p.price)}</p>`:''}<p class="stock ${Number(p.stock)<=0?'out':''}"><b>${stockText(p)}</b></p><label>Talla</label><select id="productSize">${Array.isArray(p.inventory) && p.inventory.length ? p.inventory.filter(item=>Number(item.stock)>0).map(item=>`<option value="${esc(item.size)}">${esc(item.size)} — ${item.stock} disponible${Number(item.stock)===1?'':'s'}</option>`).join('') : '<option>Disponibilidad por confirmar</option>'}</select><button ${Number(p.stock)<=0?'disabled':''} onclick="addCart('${p.id}',document.querySelector('#productSize')?.value);closeModal()">${Number(p.stock)<=0?'Producto agotado':'Agregar al pedido'}</button></div></div>`;document.querySelector('#modal').classList.remove('hidden')}
 function closeModal(){document.querySelector('#modal').classList.add('hidden')}
-function addCart(id){let p=P.find(x=>x.id===id);if(!p||Number(p.stock)<=0)return;if(!cart.some(x=>x.id===id))cart.push(p);updateCart()}
+function addCart(id,size=''){
+  let p=P.find(x=>x.id===id);
+  if(!p||Number(p.stock)<=0)return;
+
+  const selectedSize=String(size||'').trim();
+
+  if(!cart.some(x=>x.id===id&&x.selectedSize===selectedSize)){
+    cart.push({
+      ...p,
+      selectedSize:selectedSize
+    });
+  }
+
+  updateCart();
+}
 function removeCart(id){cart=cart.filter(x=>x.id!==id);updateCart()}
 function updateCart(){document.querySelector('#count').textContent=cart.length;document.querySelector('#cartItems').innerHTML=cart.length?cart.map(p=>`<div class="ci"><img src="${p.images[0]}"><div><b>${esc(p.name)}</b><p>${esc(p.color||p.colors||'')}</p><button onclick="removeCart('${p.id}')">Quitar</button></div></div>`).join(''):'<p>Tu pedido está vacío.</p>'}
 function toggleCart(){document.querySelector('#drawer').classList.toggle('open');document.querySelector('#shade').classList.toggle('open')}
