@@ -96,7 +96,7 @@ async function openProduct(id){let p=P.find(x=>x.id===id);if(!p)return;try{
   if(sizeSelect){
     sizeSelect.style.display='none';
   }
-}}
+}
 function closeModal(){document.querySelector('#modal').classList.add('hidden')}
 function addCart(id,size=''){
   let p=P.find(x=>x.id===id);
