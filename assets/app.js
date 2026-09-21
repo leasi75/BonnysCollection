@@ -101,7 +101,8 @@ function addCart(id,size=''){
   if(!cart.some(x=>x.id===id&&x.selectedSize===selectedSize)){
     cart.push({
       ...p,
-      selectedSize:selectedSize
+      selectedSize:selectedSize,
+      quantity:1
     });
   }
 
