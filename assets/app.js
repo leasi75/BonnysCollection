@@ -111,7 +111,7 @@ function removeCart(id){cart=cart.filter(x=>x.id!==id);updateCart()}
 function updateCart(){document.querySelector('#count').textContent=cart.length;document.querySelector('#cartItems').innerHTML=cart.length?cart.map(p=>`<div class="ci"><img src="${p.images[0]}"><div><b>${esc(p.name)}</b><p>${esc(p.color||p.colors||'')}${p.selectedSize?` · Talla: ${esc(p.selectedSize)}`:''}</p><button onclick="removeCart('${p.id}')">Quitar</button></div></div>`).join(''):'<p>Tu pedido está vacío.</p>'}
 function toggleCart(){document.querySelector('#drawer').classList.toggle('open');document.querySelector('#shade').classList.toggle('open')}
 document.querySelector('#cartBtn').onclick=toggleCart;
-document.querySelector('#wa').onclick=()=>{if(!cart.length)return;let msg='Hola, me interesan estos productos de Bonny’s Collection:\n\n'+cart.map((p,i)=>`${i+1}. ${p.name} - ${p.color||p.colors||''}`).join('\n')+'\n\n¿Me pueden confirmar disponibilidad, tallas y precio?';window.open('https://wa.me/527221144931?text='+encodeURIComponent(msg),'_blank')};
+document.querySelector('#wa').onclick=()=>{if(!cart.length)return;let msg='Hola, me interesan estos productos de Bonny’s Collection:\n\n'+cart.map((p,i)=>`${i+1}. ${p.name} - ${p.color||p.colors||''}${p.selectedSize?` - Talla: ${p.selectedSize}`:''}`).join('\n')+'\n\n¿Me pueden confirmar disponibilidad, tallas y precio?';window.open('https://wa.me/527221144931?text='+encodeURIComponent(msg),'_blank')};
 // ADMIN
 const adminModal=document.querySelector('#adminModal'),adminList=document.querySelector('#adminList'),productForm=document.querySelector('#productForm');
 // --------------------------------------------------
