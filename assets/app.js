@@ -239,7 +239,31 @@ function showForm(p){productForm.classList.remove('hidden');productForm.innerHTM
 function cancelForm(){productForm.classList.add('hidden')}
 function readFiles(files){return Promise.all([...files].map(f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)})))}
 async function saveProduct(oldId) {
+  const inventoryText = document.querySelector('#fSizes').value.trim();
 
+  const inventory = inventoryText
+    ? inventoryText.split(',').map(item => {
+        const [size, stock] = item.split(':');
+
+        return {
+          size: String(size || '').trim(),
+          stock: Number(String(stock || '').trim())
+        };
+      })
+    : [];
+
+  const inventoryValid = inventory.every(item =>
+    item.size &&
+    Number.isInteger(item.stock) &&
+    item.stock >= 0
+  );
+
+  if (!inventoryValid) {
+    alert(
+      'Inventario inválido. Usa el formato talla:cantidad. Ejemplo: 30:2, 32:4, 34:1'
+    );
+    return;
+  }
   const name = document.querySelector('#fName').value.trim();
 
   if (!name) {
