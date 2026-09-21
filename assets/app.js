@@ -191,7 +191,50 @@ document.querySelector('#adminBtn').onclick = async () => {
 function closeAdmin(){adminModal.classList.add('hidden');productForm.classList.add('hidden')}
 function drawAdmin(){adminList.innerHTML=P.map(p=>`<div class="adminRow"><img src="${p.images[0]}"><div class="adminInfo"><b>${esc(p.name)}</b><span>${p.category} · ${esc(p.color||p.colors||'')}</span><span class="${Number(p.stock)<=0?'red':''}">Stock: ${p.stock??0}${p.price?' · $'+esc(p.price):''}</span></div><div class="adminActions"><button onclick="editProduct('${p.id}')">Editar</button><button class="danger" onclick="deleteProduct('${p.id}')">Eliminar</button></div></div>`).join('')}
 function newProduct(){showForm({id:'',name:'',category:'Trajes',images:[],color:'',description:'',stock:1,price:'',sizes:'',colors:''})}
-function editProduct(id){const p=P.find(x=>x.id===id);if(p)showForm({...p})}
+async function editProduct(id) {
+
+  const p = P.find(x => x.id === id);
+
+  if (!p) return;
+
+  try {
+
+    const response = await fetch(
+      `/api/inventory?product_id=${encodeURIComponent(id)}`,
+      {
+        cache: 'no-store'
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data.error || 'No fue posible consultar el inventario.'
+      );
+    }
+
+    const inventory = Array.isArray(data.inventory)
+      ? data.inventory
+      : [];
+
+    showForm({
+      ...p,
+      inventory
+    });
+
+  } catch (error) {
+
+    console.error(
+      'Error consultando inventario:',
+      error
+    );
+
+    alert(
+      'No fue posible cargar el inventario de este producto.'
+    );
+  }
+}
 function showForm(p){productForm.classList.remove('hidden');productForm.innerHTML=`<h3>${p.id?'Editar producto':'Nuevo producto'}</h3><div class="formGrid"><label>Nombre<input id="fName" value="${esc(p.name)}"></label><label>Categoría<select id="fCat">${cats.slice(1).map(c=>`<option ${c===p.category?'selected':''}>${c}</option>`).join('')}</select></label><label>Color<input id="fColor" value="${esc(p.color||'')}"></label><label>Precio<input id="fPrice" type="number" min="0" step="0.01" value="${esc(p.price||'')}"></label><label>Stock<input id="fStock" type="number" min="0" value="${p.stock??0}"></label><label>Tallas<input id="fSizes" placeholder="Ej. 30, 32, 34" value="${esc(p.sizes||'')}"></label><label class="wide">Descripción<textarea id="fDesc">${esc(p.description||'')}</textarea></label><label class="wide">Agregar imágenes<input id="fImages" type="file" accept="image/*" multiple><small>Las imágenes se guardan en este navegador. Puedes seleccionar una o varias.</small></label></div><div class="previewImgs">${(p.images||[]).map(i=>`<img src="${i}">`).join('')}</div><div class="formButtons"><button onclick="cancelForm()">Cancelar</button><button class="primary" onclick="saveProduct('${p.id}')">Guardar producto</button></div>`;productForm.scrollIntoView({behavior:'smooth',block:'start'});productForm.dataset.oldImages=JSON.stringify(p.images||[])}
 function cancelForm(){productForm.classList.add('hidden')}
 function readFiles(files){return Promise.all([...files].map(f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)})))}
