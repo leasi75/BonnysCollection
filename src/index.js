@@ -288,7 +288,179 @@ export default {
       }
     }
 
+    // --------------------------------------------------
+    // API ADMIN: Guardar inventario por talla
+    // --------------------------------------------------
+    if (
+      url.pathname.startsWith("/api/admin/inventory/") &&
+      request.method === "PUT"
+    ) {
+      if (!(await hasAdminSession())) {
+        return Response.json(
+          {
+            success: false,
+            error: "No autorizado"
+          },
+          { status: 401 }
+        );
+      }
 
+      const productId = Number(
+        url.pathname.split("/").pop()
+      );
+
+      if (
+        !Number.isInteger(productId) ||
+        productId <= 0
+      ) {
+        return Response.json(
+          {
+            success: false,
+            error: "ID de producto inválido"
+          },
+          { status: 400 }
+        );
+      }
+
+      try {
+        const body = await request.json();
+
+        if (!Array.isArray(body.inventory)) {
+          return Response.json(
+            {
+              success: false,
+              error: "Inventario inválido"
+            },
+            { status: 400 }
+          );
+        }
+
+        // Comprobar que el producto existe y está activo
+        const product = await env.DB
+          .prepare(`
+            SELECT id
+            FROM products
+            WHERE id = ?
+              AND active = 1
+          `)
+          .bind(productId)
+          .first();
+
+        if (!product) {
+          return Response.json(
+            {
+              success: false,
+              error: "Producto no encontrado"
+            },
+            { status: 404 }
+          );
+        }
+
+        // Validar y normalizar tallas
+        const inventory = [];
+        const usedSizes = new Set();
+
+        for (const item of body.inventory) {
+          const size = String(item.size || "").trim();
+          const stock = Number(item.stock);
+
+          if (!size) {
+            return Response.json(
+              {
+                success: false,
+                error: "Todas las tallas deben tener un nombre"
+              },
+              { status: 400 }
+            );
+          }
+
+          if (
+            !Number.isInteger(stock) ||
+            stock < 0
+          ) {
+            return Response.json(
+              {
+                success: false,
+                error: `Stock inválido para la talla ${size}`
+              },
+              { status: 400 }
+            );
+          }
+
+          const sizeKey = size.toLowerCase();
+
+          if (usedSizes.has(sizeKey)) {
+            return Response.json(
+              {
+                success: false,
+                error: `La talla ${size} está repetida`
+              },
+              { status: 400 }
+            );
+          }
+
+          usedSizes.add(sizeKey);
+
+          inventory.push({
+            size,
+            stock
+          });
+        }
+
+        // Reemplazar el inventario actual del producto
+        const statements = [
+          env.DB
+            .prepare(`
+              DELETE FROM inventory
+              WHERE product_id = ?
+            `)
+            .bind(productId)
+        ];
+
+        for (const item of inventory) {
+          statements.push(
+            env.DB
+              .prepare(`
+                INSERT INTO inventory
+                (
+                  product_id,
+                  size,
+                  stock
+                )
+                VALUES (?, ?, ?)
+              `)
+              .bind(
+                productId,
+                item.size,
+                item.stock
+              )
+          );
+        }
+
+        await env.DB.batch(statements);
+
+        const totalStock = inventory.reduce(
+          (total, item) => total + item.stock,
+          0
+        );
+
+        return Response.json({
+          success: true,
+          product_id: productId,
+          inventory,
+          total_stock: totalStock
+        });
+
+      } catch (error) {
+        return Response.json(
+          {
+            success: false,
+            error: error.message
+          },
+          { status: 500 }
+        );
+      }
+    }
     // --------------------------------------------------
     // API ADMIN: Crear producto
     // --------------------------------------------------
