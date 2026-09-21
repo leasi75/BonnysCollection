@@ -1,7 +1,10 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-
+const isAdminRequest = () => {
+  const auth = request.headers.get("Authorization");
+  return auth === `Bearer ${env.ADMIN_KEY}`;
+};
     // --------------------------------------------------
     // API: Comprobar Worker + D1
     // --------------------------------------------------
@@ -128,7 +131,203 @@ export default {
         );
       }
     }
+// --------------------------------------------------
+// API ADMIN: Crear producto
+// --------------------------------------------------
+if (url.pathname === "/api/admin/products" && request.method === "POST") {
+  if (!isAdminRequest()) {
+    return Response.json(
+      { success: false, error: "No autorizado" },
+      { status: 401 }
+    );
+  }
 
+  try {
+    const body = await request.json();
+
+    const name = String(body.name || "").trim();
+    const category = String(body.category || "").trim();
+    const description = String(body.description || "").trim();
+    const color = String(body.color || "").trim();
+    const price = Number(body.price || 0);
+
+    const validCategories = [
+      "Trajes",
+      "Sacos",
+      "Complementos",
+      "Accesorios",
+      "Telas"
+    ];
+
+    if (!name) {
+      return Response.json(
+        { success: false, error: "El nombre es obligatorio" },
+        { status: 400 }
+      );
+    }
+
+    if (!validCategories.includes(category)) {
+      return Response.json(
+        { success: false, error: "Categoría inválida" },
+        { status: 400 }
+      );
+    }
+
+    const slug =
+      String(body.slug || name)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "") +
+      "-" +
+      Date.now();
+
+    const result = await env.DB
+      .prepare(`
+        INSERT INTO products
+        (slug, name, category, description, price, color, active)
+        VALUES (?, ?, ?, ?, ?, ?, 1)
+      `)
+      .bind(slug, name, category, description, price, color)
+      .run();
+
+    return Response.json({
+      success: true,
+      id: result.meta.last_row_id,
+      slug
+    });
+
+  } catch (error) {
+    return Response.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+
+// --------------------------------------------------
+// API ADMIN: Editar producto
+// --------------------------------------------------
+if (url.pathname.startsWith("/api/admin/products/") &&
+    request.method === "PUT") {
+
+  if (!isAdminRequest()) {
+    return Response.json(
+      { success: false, error: "No autorizado" },
+      { status: 401 }
+    );
+  }
+
+  const id = Number(url.pathname.split("/").pop());
+
+  if (!Number.isInteger(id) || id <= 0) {
+    return Response.json(
+      { success: false, error: "ID inválido" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const body = await request.json();
+
+    const name = String(body.name || "").trim();
+    const category = String(body.category || "").trim();
+    const description = String(body.description || "").trim();
+    const color = String(body.color || "").trim();
+    const price = Number(body.price || 0);
+
+    const validCategories = [
+      "Trajes",
+      "Sacos",
+      "Complementos",
+      "Accesorios",
+      "Telas"
+    ];
+
+    if (!name || !validCategories.includes(category)) {
+      return Response.json(
+        { success: false, error: "Datos inválidos" },
+        { status: 400 }
+      );
+    }
+
+    await env.DB
+      .prepare(`
+        UPDATE products
+        SET
+          name = ?,
+          category = ?,
+          description = ?,
+          price = ?,
+          color = ?,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `)
+      .bind(name, category, description, price, color, id)
+      .run();
+
+    return Response.json({
+      success: true,
+      id
+    });
+
+  } catch (error) {
+    return Response.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+
+// --------------------------------------------------
+// API ADMIN: Desactivar producto
+// --------------------------------------------------
+if (url.pathname.startsWith("/api/admin/products/") &&
+    request.method === "DELETE") {
+
+  if (!isAdminRequest()) {
+    return Response.json(
+      { success: false, error: "No autorizado" },
+      { status: 401 }
+    );
+  }
+
+  const id = Number(url.pathname.split("/").pop());
+
+  if (!Number.isInteger(id) || id <= 0) {
+    return Response.json(
+      { success: false, error: "ID inválido" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    await env.DB
+      .prepare(`
+        UPDATE products
+        SET
+          active = 0,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `)
+      .bind(id)
+      .run();
+
+    return Response.json({
+      success: true,
+      id
+    });
+
+  } catch (error) {
+    return Response.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
+  }
+}
     // --------------------------------------------------
     // Cualquier otra dirección conserva el sitio actual
     // --------------------------------------------------
