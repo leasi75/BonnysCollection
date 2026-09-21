@@ -247,7 +247,7 @@ async function saveProduct(oldId) {
 
         return {
           size: String(size || '').trim(),
-          stock: Number(String(stock || '').trim())
+          stock: stock === undefined ? NaN : Number(String(stock).trim())
         };
       })
     : [];
