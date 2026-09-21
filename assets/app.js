@@ -87,6 +87,7 @@ async function openProduct(id){let p=P.find(x=>x.id===id);if(!p)return;try{
   const response=await fetch(`/api/inventory?product_id=${encodeURIComponent(id)}`,{cache:'no-store'});
   const data=await response.json();
   p.inventory=(response.ok&&data.success&&Array.isArray(data.inventory))?data.inventory:[];
+  const isSingleSize=p.inventory.length===1&&String(p.inventory[0].size).toLowerCase()==='única';
 }catch(error){
   console.error('Error consultando inventario del producto:',error);
   p.inventory=[];
