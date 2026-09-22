@@ -155,6 +155,7 @@ function render(){
 async function openProduct(id){let p=P.find(x=>x.id===id);if(!p)return;if(p.category==='Telas'){
   document.querySelector('#modalBody').innerHTML=`
     <div class="detail">
+
       <div class="gallery">
         ${(p.images||[]).map(i=>`
           <img src="${i}" alt="${esc(p.name)}">
@@ -162,13 +163,36 @@ async function openProduct(id){let p=P.find(x=>x.id===id);if(!p)return;if(p.cate
       </div>
 
       <div class="detailText">
+
         <small>MUESTRARIO DE TELAS</small>
 
         <h2>${esc(p.name)}</h2>
 
         ${
           p.color||p.colors
-            ? `<p><b>Color:</try{
+            ? `<p><b>Color:</b> ${esc(p.color||p.colors)}</p>`
+            : ''
+        }
+
+        ${
+          p.description
+            ? `<p>${esc(p.description)}</p>`
+            : ''
+        }
+
+        <p>
+          <b>Consulta disponibilidad y opciones de confección.</b>
+        </p>
+
+      </div>
+
+    </div>
+  `;
+
+  document.querySelector('#modal').classList.remove('hidden');
+
+  return;
+}try{
   const response=await fetch(`/api/inventory?product_id=${encodeURIComponent(id)}`,{cache:'no-store'});
   const data=await response.json();
   p.inventory=(response.ok&&data.success&&Array.isArray(data.inventory))?data.inventory:[];
