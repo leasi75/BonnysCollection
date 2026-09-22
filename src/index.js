@@ -484,6 +484,82 @@ export default {
         );
       }
     }
+        // --------------------------------------------------
+    // API ADMIN: Subir imagen a R2
+    // --------------------------------------------------
+    if (
+      url.pathname === "/api/admin/images" &&
+      request.method === "POST"
+    ) {
+      if (!(await hasAdminSession())) {
+        return Response.json(
+          {
+            success: false,
+            error: "No autorizado"
+          },
+          { status: 401 }
+        );
+      }
+
+      try {
+        const formData = await request.formData();
+        const file = formData.get("image");
+
+        if (!file || typeof file === "string") {
+          return Response.json(
+            {
+              success: false,
+              error: "No se recibió una imagen"
+            },
+            { status: 400 }
+          );
+        }
+
+        if (!file.type || !file.type.startsWith("image/")) {
+          return Response.json(
+            {
+              success: false,
+              error: "El archivo debe ser una imagen"
+            },
+            { status: 400 }
+          );
+        }
+
+        const extension =
+          file.name && file.name.includes(".")
+            ? file.name.split(".").pop().toLowerCase()
+            : "jpg";
+
+        const key =
+          `products/${Date.now()}-${crypto.randomUUID()}.${extension}`;
+
+        await env.IMAGES.put(
+          key,
+          await file.arrayBuffer(),
+          {
+            httpMetadata: {
+              contentType: file.type
+            }
+          }
+        );
+
+        return Response.json({
+          success: true,
+          key,
+          url: `/api/images/${key}`
+        });
+
+      } catch (error) {
+        return Response.json(
+          {
+            success: false,
+            error: error.message
+          },
+          { status: 500 }
+        );
+      }
+    }
+
     // --------------------------------------------------
     // API ADMIN: Crear producto
     // --------------------------------------------------
