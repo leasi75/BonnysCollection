@@ -387,8 +387,35 @@ async function saveProduct(oldId) {
     if (!response.ok || !data.success) {
       throw new Error(data.error || 'No fue posible guardar el producto.');
     }
-    const productId = isEditing ? oldId : data.id;
+        const productId = isEditing ? oldId : data.id;
 
+    if (uploadedImages.length > 0) {
+      const imageLinkResponse = await fetch(
+        '/api/admin/product-images',
+        {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            product_id: Number(productId),
+            image_url: uploadedImages[0],
+            sort_order: 0
+          })
+        }
+      );
+
+      const imageLinkData = await imageLinkResponse.json();
+
+      if (!imageLinkResponse.ok || !imageLinkData.success) {
+        throw new Error(
+          imageLinkData.error ||
+          'La imagen se subió, pero no fue posible asociarla al producto.'
+        );
+      }
+    }
+ 
     const inventoryResponse = await fetch(
       `/api/admin/inventory/${encodeURIComponent(productId)}`,
       {
