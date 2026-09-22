@@ -711,6 +711,104 @@ export default {
         );
       }
     }
+        // --------------------------------------------------
+    // API ADMIN: Eliminar imagen de producto
+    // --------------------------------------------------
+    if (
+      url.pathname === "/api/admin/product-images" &&
+      request.method === "DELETE"
+    ) {
+      if (!(await hasAdminSession())) {
+        return Response.json(
+          {
+            success: false,
+            error: "No autorizado"
+          },
+          { status: 401 }
+        );
+      }
+
+      try {
+        const body = await request.json();
+
+        const productId = Number(body.product_id);
+        const imageUrl = String(body.image_url || "").trim();
+
+        if (!Number.isInteger(productId) || productId <= 0) {
+          return Response.json(
+            {
+              success: false,
+              error: "ID de producto inválido"
+            },
+            { status: 400 }
+          );
+        }
+
+        if (!imageUrl.startsWith("/api/images/")) {
+          return Response.json(
+            {
+              success: false,
+              error: "URL de imagen inválida"
+            },
+            { status: 400 }
+          );
+        }
+
+        const image = await env.DB
+          .prepare(`
+            SELECT id, image_url
+            FROM product_images
+            WHERE product_id = ?
+              AND image_url = ?
+          `)
+          .bind(
+            productId,
+            imageUrl
+          )
+          .first();
+
+        if (!image) {
+          return Response.json(
+            {
+              success: false,
+              error: "Imagen no encontrada"
+            },
+            { status: 404 }
+          );
+        }
+
+        await env.DB
+          .prepare(`
+            DELETE FROM product_images
+            WHERE id = ?
+          `)
+          .bind(image.id)
+          .run();
+
+        const key = decodeURIComponent(
+          image.image_url.replace("/api/images/", "")
+        );
+
+        if (key) {
+          await env.IMAGES.delete(key);
+        }
+
+        return Response.json({
+          success: true,
+          product_id: productId,
+          image_url: imageUrl
+        });
+
+      } catch (error) {
+        return Response.json(
+          {
+            success: false,
+            error: error.message
+          },
+          { status: 500 }
+        );
+      }
+    }
     // --------------------------------------------------
     // API ADMIN: Crear producto
     // --------------------------------------------------
