@@ -333,9 +333,10 @@ async function saveProduct(oldId) {
 
   let uploadedImages = [];
 
-  if (selectedFiles.length > 0) {
+ if (selectedFiles.length > 0) {
+  for (const file of selectedFiles) {
     const formData = new FormData();
-    formData.append('image', selectedFiles[0]);
+    formData.append('image', file);
 
     const imageResponse = await fetch('/api/admin/images', {
       method: 'POST',
@@ -353,12 +354,13 @@ async function saveProduct(oldId) {
 
     if (!imageResponse.ok || !imageData.success) {
       throw new Error(
-        imageData.error || 'No fue posible subir la imagen.'
+        imageData.error || 'No fue posible subir una de las imágenes.'
       );
     }
 
     uploadedImages.push(imageData.url);
   }
+}
   try {
 
     const isEditing = Boolean(oldId);
