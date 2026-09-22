@@ -328,7 +328,37 @@ async function saveProduct(oldId) {
     description,
     price: priceValue === '' ? 0 : Number(priceValue)
   };
+  const imageInput = document.querySelector('#fImages');
+  const selectedFiles = imageInput?.files || [];
 
+  let uploadedImages = [];
+
+  if (selectedFiles.length > 0) {
+    const formData = new FormData();
+    formData.append('image', selectedFiles[0]);
+
+    const imageResponse = await fetch('/api/admin/images', {
+      method: 'POST',
+      credentials: 'same-origin',
+      body: formData
+    });
+
+    const imageData = await imageResponse.json();
+
+    if (imageResponse.status === 401) {
+      alert('Tu sesión de administración terminó. Ingresa nuevamente.');
+      closeAdmin();
+      return;
+    }
+
+    if (!imageResponse.ok || !imageData.success) {
+      throw new Error(
+        imageData.error || 'No fue posible subir la imagen.'
+      );
+    }
+
+    uploadedImages.push(imageData.url);
+  }
   try {
 
     const isEditing = Boolean(oldId);
