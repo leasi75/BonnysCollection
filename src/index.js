@@ -616,7 +616,101 @@ export default {
         );
       }
     }
+    // --------------------------------------------------
+    // API ADMIN: Asociar imagen a producto
+    // --------------------------------------------------
+    if (
+      url.pathname === "/api/admin/product-images" &&
+      request.method === "POST"
+    ) {
+      if (!(await hasAdminSession())) {
+        return Response.json(
+          {
+            success: false,
+            error: "No autorizado"
+          },
+          { status: 401 }
+        );
+      }
 
+      try {
+        const body = await request.json();
+
+        const productId = Number(body.product_id);
+        const imageUrl = String(body.image_url || "").trim();
+        const sortOrder = Number(body.sort_order || 0);
+
+        if (!Number.isInteger(productId) || productId <= 0) {
+          return Response.json(
+            {
+              success: false,
+              error: "ID de producto inválido"
+            },
+            { status: 400 }
+          );
+        }
+
+        if (!imageUrl.startsWith("/api/images/")) {
+          return Response.json(
+            {
+              success: false,
+              error: "URL de imagen inválida"
+            },
+            { status: 400 }
+          );
+        }
+
+        const product = await env.DB
+          .prepare(
+            `SELECT id FROM products WHERE id = ? AND active = 1`
+          )
+          .bind(productId)
+          .first();
+
+        if (!product) {
+          return Response.json(
+            {
+              success: false,
+              error: "Producto no encontrado"
+            },
+            { status: 404 }
+          );
+        }
+
+        const result = await env.DB
+          .prepare(`
+            INSERT INTO product_images
+            (
+              product_id,
+              image_url,
+              sort_order
+            )
+            VALUES (?, ?, ?)
+          `)
+          .bind(
+            productId,
+            imageUrl,
+            sortOrder
+          )
+          .run();
+
+        return Response.json({
+          success: true,
+          id: result.meta.last_row_id,
+          product_id: productId,
+          image_url: imageUrl
+        });
+
+      } catch (error) {
+        return Response.json(
+          {
+            success: false,
+            error: error.message
+          },
+          { status: 500 }
+        );
+      }
+    }
     // --------------------------------------------------
     // API ADMIN: Crear producto
     // --------------------------------------------------
