@@ -152,7 +152,23 @@ function render(){
     `;
   }).join('')||'<p>No encontramos productos.</p>';
 }
-async function openProduct(id){let p=P.find(x=>x.id===id);if(!p)return;try{
+async function openProduct(id){let p=P.find(x=>x.id===id);if(!p)return;if(p.category==='Telas'){
+  document.querySelector('#modalBody').innerHTML=`
+    <div class="detail">
+      <div class="gallery">
+        ${(p.images||[]).map(i=>`
+          <img src="${i}" alt="${esc(p.name)}">
+        `).join('')}
+      </div>
+
+      <div class="detailText">
+        <small>MUESTRARIO DE TELAS</small>
+
+        <h2>${esc(p.name)}</h2>
+
+        ${
+          p.color||p.colors
+            ? `<p><b>Color:</try{
   const response=await fetch(`/api/inventory?product_id=${encodeURIComponent(id)}`,{cache:'no-store'});
   const data=await response.json();
   p.inventory=(response.ok&&data.success&&Array.isArray(data.inventory))?data.inventory:[];
