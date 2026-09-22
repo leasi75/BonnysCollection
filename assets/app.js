@@ -81,8 +81,77 @@ function setFilter(c){filter=c;drawChips();render()}
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>setFilter(b.dataset.filter));
 function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function stockText(p){return Number(p.stock)>0?`Stock: ${p.stock}`:'Agotado'}
-function render(){let q=search.value.toLowerCase();let a=P.filter(p=>(filter==='Todos'||p.category===filter)&&(p.name+' '+(p.color||'')+' '+(p.colors||'')).toLowerCase().includes(q));grid.innerHTML=a.map(p=>`<article class="card"><div onclick="openProduct('${p.id}')"><div class="photo ${p.category==='Accesorios'?'accessoryPhoto':''}" style="background-image:url('${p.images[0]}')"></div><div class="info"><span class="cat">${p.category.toUpperCase()}</span><h3>${esc(p.name)}</h3><p>${esc(p.color||p.colors||'')}</p><div class="stock ${Number(p.stock)<=0?'out':''}">${stockText(p)}</div>${p.price?`<div class="price">$${esc(p.price)}</div>`:''}</div></div><button class="add" ${Number(p.stock)<=0?'disabled':''} onclick="openProduct('${p.id}')">${Number(p.stock)<=0?'Agotado':'Agregar al pedido'}</button></article>`).join('')||'<p>No encontramos productos.</p>'}
-search.oninput=render;
+function render(){
+  let q=search.value.toLowerCase();
+
+  let a=P.filter(p=>
+    (filter==='Todos'||p.category===filter)&&
+    (p.name+' '+(p.color||'')+' '+(p.colors||''))
+      .toLowerCase()
+      .includes(q)
+  );
+
+  grid.innerHTML=a.map(p=>{
+    const isFabric=p.category==='Telas';
+
+    return `
+      <article class="card">
+
+        <div onclick="openProduct('${p.id}')">
+
+          <div
+            class="photo ${p.category==='Accesorios'?'accessoryPhoto':''}"
+            style="background-image:url('${p.images[0]}')">
+          </div>
+
+          <div class="info">
+
+            <span class="cat">
+              ${p.category.toUpperCase()}
+            </span>
+
+            <h3>${esc(p.name)}</h3>
+
+            <p>${esc(p.color||p.colors||'')}</p>
+
+            ${
+              isFabric
+                ? ''
+                : `
+                  <div class="stock ${Number(p.stock)<=0?'out':''}">
+                    ${stockText(p)}
+                  </div>
+
+                  ${p.price?`<div class="price">$${esc(p.price)}</div>`:''}
+                `
+            }
+
+          </div>
+        </div>
+
+        ${
+          isFabric
+            ? `
+              <button
+                class="add"
+                onclick="openProduct('${p.id}')">
+                Ver galería
+              </button>
+            `
+            : `
+              <button
+                class="add"
+                ${Number(p.stock)<=0?'disabled':''}
+                onclick="openProduct('${p.id}')">
+                ${Number(p.stock)<=0?'Agotado':'Agregar al pedido'}
+              </button>
+            `
+        }
+
+      </article>
+    `;
+  }).join('')||'<p>No encontramos productos.</p>';
+}
 async function openProduct(id){let p=P.find(x=>x.id===id);if(!p)return;try{
   const response=await fetch(`/api/inventory?product_id=${encodeURIComponent(id)}`,{cache:'no-store'});
   const data=await response.json();
