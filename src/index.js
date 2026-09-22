@@ -485,6 +485,63 @@ export default {
       }
     }
         // --------------------------------------------------
+    // API PUBLICA: Mostrar imagen almacenada en R2
+    // --------------------------------------------------
+    if (
+      url.pathname.startsWith("/api/images/") &&
+      request.method === "GET"
+    ) {
+      try {
+        const key = decodeURIComponent(
+          url.pathname.replace("/api/images/", "")
+        );
+
+        if (!key) {
+          return new Response("Imagen no encontrada", {
+            status: 404
+          });
+        }
+
+        const object = await env.IMAGES.get(key);
+
+        if (!object) {
+          return new Response("Imagen no encontrada", {
+            status: 404
+          });
+        }
+
+        const headers = new Headers();
+
+        object.writeHttpMetadata(headers);
+
+        headers.set(
+          "etag",
+          object.httpEtag
+        );
+
+        headers.set(
+          "Cache-Control",
+          "public, max-age=31536000, immutable"
+        );
+
+        return new Response(
+          object.body,
+          {
+            headers
+          }
+        );
+
+      } catch (error) {
+        return Response.json(
+          {
+            success: false,
+            error: error.message
+          },
+          { status: 500 }
+        );
+      }
+    }
+        // --------------------------------------------------
     // API ADMIN: Subir imagen a R2
     // --------------------------------------------------
     if (
